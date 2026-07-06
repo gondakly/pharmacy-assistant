@@ -7,9 +7,7 @@ import time
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 
-# -----------------------------------------------------------------------------
 # PRODUCTION CODE ARCHITECTURE & SYSTEM CONFIGURATION
-# -----------------------------------------------------------------------------
 # ENHANCEMENT: Using strict relative execution pathing to prevent Linux deployment crashes.
 # The absolute windows drive paths ('D:/pharmacy Assistant/...') are completely decoupled.
 st.set_page_config(
