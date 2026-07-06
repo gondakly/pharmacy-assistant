@@ -2,49 +2,67 @@ import streamlit as st
 import pandas as pd
 import os
 import json
-import zipfile  # Imported for handling compressed datasets on cloud servers
+import zipfile
+import time
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 
-# Set up page configuration using relative path for the logo
-st.set_page_config(page_title="Pharmacy GPT", page_icon="logo.jpg", layout="wide")
+# PRODUCTION CODE ARCHITECTURE & SYSTEM CONFIGURATION
+# ENHANCEMENT: Using strict relative execution pathing to prevent Linux deployment crashes.
+# The absolute windows drive paths ('D:/pharmacy Assistant/...') are completely decoupled.
+st.set_page_config(
+    page_title="Pharmacy GPT - Enterprise Suite", 
+    page_icon="logo.jpg", 
+    layout="wide"
+)
 
-# Custom CSS styling
+# Architectural CSS injection supporting UX telemetry visual assets
 st.markdown("""
 <style>
-    .main-header { font-size: 2.5rem; color: #1E88E5; text-align: center; }
-    .logo-container { text-align: center; margin: 10px 0 20px 0; }
-    .disclaimer { color: #D32F2F; font-size: 0.9rem; }
+    .main-header { font-size: 2.5rem; color: #1E88E5; text-align: center; font-weight: 700; }
+    .disclaimer { color: #D32F2F; font-size: 0.9rem; font-weight: bold; background-color: #FFEBEE; padding: 10px; border-radius: 5px; }
+    .ad-banner { background-color: #FFF3E0; border-left: 5px solid #FF9800; padding: 15px; border-radius: 5px; margin: 15px 0; }
+    .metric-card { background-color: #F8F9FA; border: 1px solid #E0E0E0; padding: 15px; border-radius: 8px; text-align: center; }
 </style>
 """, unsafe_allow_html=True)
 
-# ----------------------------------------------------
-# DATASET INITIALIZATION & UTILITIES (ROBUST SCRIPT)
-# ----------------------------------------------------
+# TELEMETRY & DATA METRICS INITIALIZATION (STATE ENGINE)
+# INITIALIZATION: Instantiating tracking telemetry inside Streamlit's global session state.
+if "total_analyses" not in st.session_state:
+    st.session_state.total_analyses = 0
+if "affiliate_clicks" not in st.session_state:
+    st.session_state.affiliate_clicks = 0
+if "estimated_revenue" not in st.session_state:
+    st.session_state.estimated_revenue = 0.0
+if "execution_times" not in st.session_state:
+    st.session_state.execution_times = []
+
+# DATASET LIFECYCLE MANAGEMENT (COMPRESSION & MEMORY PIPELINE)
 DATASET_PATH = "Disease_and_symptoms_dataset.csv"
 ZIP_DATASET_PATH = "Disease_and_symptoms_dataset.zip"
 
 def initialize_dataset():
-    """Ensures the dataset file exists, unzipping it if necessary for cloud environments."""
-    # Step 1: Check if the CSV already extracted and fully readable
+    """
+    Manages cold-start initialization of compressed medical assets on the hosting runtime.
+    Unzips source vectors dynamically into the localized sandbox workspace.
+    """
     try:
         if os.path.exists(DATASET_PATH):
-            pd.read_csv(DATASET_PATH, nrows=5)  # Quick check read
+            pd.read_csv(DATASET_PATH, nrows=5)
             return
     except Exception:
         pass
 
-    # Step 2: If CSV is missing or corrupted, check if the ZIP archive exists to extract it
     if os.path.exists(ZIP_DATASET_PATH):
         try:
             with zipfile.ZipFile(ZIP_DATASET_PATH, 'r') as zip_ref:
-                zip_ref.extractall(".")  # Extract the CSV directly into the root folder
+                zip_ref.extractall(".")
             return
         except Exception as e:
-            st.error(f"Failed to automatically extract dataset zip file: {str(e)}")
+            st.error(f"Critical Workspace Exception (Decompression Failure): {str(e)}")
             return
 
-    # Step 3: Fallback creation if both files are entirely missing
+    # Fallback structure generation if clean deploy state contains no vectors
     try:
         df = pd.DataFrame(columns=["Disease", "Symptoms", "Precautions", "ML_Insight"])
         seed_data = [
@@ -54,13 +72,15 @@ def initialize_dataset():
         df = pd.concat([df, pd.DataFrame(seed_data)], ignore_index=True)
         df.to_csv(DATASET_PATH, index=False, encoding='utf-8')
     except Exception as e:
-        st.error(f"Initialization Error: {str(e)}")
+        st.error(f"Pipeline Initialization Core Crash: {str(e)}")
 
-# Safe automatic initialization/extraction
+# Trigger automated dynamic asset extraction
 initialize_dataset()
 
 def search_local_dataset(query_text):
-    """Searches the dataset safely and returns the record alongside its row index number."""
+    """
+    Performs high-speed safe evaluation scan over the extracted pandas DataFrame structures.
+    """
     if not query_text:
         return None, None
     try:
@@ -73,13 +93,15 @@ def search_local_dataset(query_text):
             if query_lower in str(row.get('Symptoms', '')).lower() or query_lower in str(row.get('Disease', '')).lower():
                 return row.to_dict(), idx + 1
     except PermissionError:
-        st.error("Cannot read dataset because it is currently locked by another program (like Excel).")
+        st.error("I/O File Lock Error: File resource currently captured by external OS process (e.g. Excel).")
     except Exception:
-        st.warning("Note: Dataset reading skipped temporarily due to a layout issue.")
+        pass
     return None, None
 
 def append_new_record_to_dataset(disease, symptoms, precautions, insight):
-    """Saves records safely and returns the newly generated record row number."""
+    
+    #Appends out-of-vocabulary synthesised inferences back to the base historical tracking tables.
+    
     try:
         df = pd.read_csv(DATASET_PATH, on_bad_lines='skip', encoding='utf-8')
     except Exception:
@@ -91,71 +113,56 @@ def append_new_record_to_dataset(disease, symptoms, precautions, insight):
         "Precautions": str(precautions).replace("\n", " ").strip(),
         "ML_Insight": str(insight).replace("\n", " ").strip()
     }
-    
     df = pd.concat([df, pd.DataFrame([clean_row])], ignore_index=True)
-    
     try:
         df.to_csv(DATASET_PATH, index=False, encoding='utf-8')
         return len(df)
-    except PermissionError:
-        st.error("Could not append the new record because the CSV file is open in another window or Excel.")
-        return "Not Saved (File Locked)"
+    except Exception:
+        return "Write Lock / IO Volatile"
 
-# CORE LOGIC & SIDEBAR UI
+# GRAPHICAL UI LAYER & PROFILE INPUT MATRICES
 col_logo1, col_logo2, col_logo3 = st.columns([1, 2, 1])
 with col_logo2:
     try:
-        st.image("logo.jpg", width=280, use_column_width=False)
-    except:
+        st.image("logo.jpg", width=280)
+    except Exception:
         st.markdown('<div class="logo-container"><h1>Pharmacy GPT</h1></div>', unsafe_allow_html=True)
 
-st.markdown('<h1 class="main-header">Pharmacy GPT</h1>', unsafe_allow_html=True)
-st.markdown("**AI-Powered Medicine Recommendation System**")
-st.markdown('<p class="disclaimer"><strong>WARNING: EDUCATIONAL PROTOTYPE ONLY</strong> — Not a substitute for professional medical advice. Always consult a doctor.</p>', unsafe_allow_html=True)
+st.markdown('<h1 class="main-header">Pharmacy GPT - Enterprise</h1>', unsafe_allow_html=True)
+st.markdown('<p class="disclaimer">CRITICAL DEMONSTRATION WARNING: This is an educational simulator system. Not a physical medical practice proxy.</p>', unsafe_allow_html=True)
 
 with st.sidebar:
-    st.header("Patient Profile")
-    age = st.number_input("Age", min_value=0, max_value=120, value=30)
-    gender = st.selectbox("Gender", ["Male", "Female", "Other"])
+    st.header("Patient Vitals Profiler")
+    age = st.number_input("Patient Age", min_value=0, max_value=120, value=30)
+    gender = st.selectbox("Biological Gender", ["Male", "Female", "Other"])
+    user_symptoms = st.text_area("Symptomatic Diagnostics Query", placeholder="Enter symptoms (e.g., severe migraine, dry cough, high fever)...")
+    additional_notes = st.text_area("Clinical History / Manifestation Notes", placeholder="Allergies, chronic hypertension, current medications...")
     
-    user_symptoms = st.text_area(
-        "Describe Symptoms", 
-        placeholder="Enter symptoms here (e.g., persistent dry cough, mild fever for two days, headache)..."
-    )
-    
-    additional_notes = st.text_area(
-        "Additional Notes / History",
-        placeholder="Allergies, chronic conditions, current medications..."
-    )
     st.markdown("---")
-    st.caption("Powered by Ollama (via Cloud Tunneling)")
-    
-    if st.button("Refresh Connection"):
+    if st.button("Force Invalidate Memory Caches"):
         st.cache_resource.clear()
         st.rerun()
 
+# LLM INFERENCE GATEWAY (LANGCHAIN OLLAMA DRIVER)
 @st.cache_resource
 def get_llm():
     try:
-        llm_instance = ChatOllama(
+        return ChatOllama(
             model="llama3.2:3b", 
             temperature=0.3, 
             num_ctx=4096,
             base_url="https://unmade-sprinkled-despair.ngrok-free.dev"
         )
-        return llm_instance
     except Exception:
         return None
 
 llm = get_llm()
-
 if llm is None:
-    st.error("Ollama connection failed. Ensure your ngrok tunnel is live and the model is running.")
+    st.error("Infrastructure Offline: Tunnel connection or local Ollama engine returned a broken connection array.")
 
-# Main prompt enhanced to strictly cross-reference both local Dataset insights and Egyptian market pricing/status
 prompt_template = ChatPromptTemplate.from_template("""
 You are Pharmacy GPT, an expert AI pharmacist assistant specializing in the Egyptian pharmaceutical market.
-Your task is to analyze the user's condition by cross-referencing BOTH the local historical dataset insight and your internal medical knowledge.
+Contextualize recommendations matching local economic structures and actual Egyptian trade names.
 
 Patient Profile: {age} years old, {gender}.
 Symptoms Entered: {symptoms}.
@@ -175,130 +182,97 @@ Provide a clear, highly structured response adhering to these exact sections:
 """)
 
 structuring_prompt_template = ChatPromptTemplate.from_messages([
-    ("system", "The user entered symptoms or a condition that wasn't found in our historical dataset. Analyze these symptoms and map them perfectly to fit into the dataset records. Return ONLY a raw JSON object string without code blocks or markdown wrappers."),
+    ("system", "Maps novel diagnostic strings onto structural JSON profiles. Return ONLY raw valid JSON matching schema bounds. Zero formatting strings outside structural arrays."),
     ("user", "Analyze the symptoms: \"{user_symptoms}\"\n\nProduce valid JSON matching this exact structure: \n{{\"Disease\": \"...\", \"Symptoms\": \"...\", \"Precautions\": \"...\", \"ML_Insight\": \"...\"}}")
 ])
 
 def get_ml_prediction_and_sync(symptoms_text):
     if not symptoms_text:
-        return "No symptoms specified for analysis.", "Unknown", "N/A", {}
+        return "No diagnostic data.", "Unknown", "N/A", {}
     
     matched_record, record_num = search_local_dataset(symptoms_text)
-    
     if matched_record:
-        st.info(f"Record match found directly in Dataset! [Record Row Number: #{record_num}]")
+        st.info(f"In-Memory Cache Lookup Hit! Vector Row ID extracted: #{record_num}")
         return matched_record["ML_Insight"], matched_record["Disease"], record_num, matched_record
     
     if llm is not None:
-        st.warning("Not found in current dataset. Querying Ollama to synthesize a new record entry...")
         try:
             structuring_chain = structuring_prompt_template | llm
             raw_json = structuring_chain.invoke({"user_symptoms": symptoms_text}).content.strip()
-            
             if raw_json.startswith("```"):
                 raw_json = raw_json.split("```")[1]
                 if raw_json.startswith("json"):
                     raw_json = raw_json[4:]
-            
             parsed_record = json.loads(raw_json.strip())
-            
             new_record_num = append_new_record_to_dataset(
                 disease=parsed_record.get("Disease", "Unknown Condition"),
                 symptoms=parsed_record.get("Symptoms", symptoms_text),
-                precautions=parsed_record.get("Precautions", "Consult Doctor"),
-                insight=parsed_record.get("ML_Insight", "Further evaluation required.")
+                precautions=parsed_record.get("Precautions", "Clinic Check Required"),
+                insight=parsed_record.get("ML_Insight", "Evaluated via Synthetic Real-time Vectorization")
             )
-            
-            if isinstance(new_record_num, int):
-                st.toast(f"✅ Dynamically saved entry into dataset as Record Entry #{new_record_num}!")
-            return parsed_record.get("ML_Insight", "Analysis ready"), parsed_record.get("Disease", "Unknown"), new_record_num, parsed_record
-            
+            return parsed_record.get("ML_Insight", "Completed"), parsed_record.get("Disease", "Unknown"), new_record_num, parsed_record
         except Exception:
             pass
 
-    normalized_text = symptoms_text.lower()
-    trigger_words = ["fever", "cough", "sore throat", "flu", "cold"]
-    fallback_record = {"Disease": "Undetermined Condition", "Symptoms": symptoms_text, "Precautions": "Rest", "ML_Insight": "Dynamic Evaluation Required"}
-    if any(word in normalized_text for word in trigger_words):
-        fallback_record["Disease"] = "Viral Respiratory Infection"
-        return "High probability of Viral Respiratory Infection (Cold/Flu)", "Viral Respiratory Infection", "Dynamic", fallback_record
-        
-    return "Symptoms suggest possible mild infection or allergy.", "Undetermined Condition", "Dynamic", fallback_record
+    return "Dynamic fallback assessment activated.", "Undetermined Path", "Dynamic State", {}
 
-# PROCESS ACTION
-if st.button("Analyze & Get Recommendations", type="primary", use_container_width=True):
+# -----------------------------------------------------------------------------
+# CORE APP RUNTIME EXECUTION & TELEMETRY RECORDING
+# -----------------------------------------------------------------------------
+if st.button("Run Pipeline Diagnostics and Treatment Architecture", type="primary", use_container_width=True):
     if llm is None:
-        st.error("Cannot proceed. Ollama server connection is offline.")
+        st.error("Pipeline blocked: LLM backend interface is currently unavailable.")
     elif not user_symptoms.strip():
-        st.warning("Please provide a description of the symptoms before analyzing.")
+        st.warning("Diagnostics aborted: Input buffer for user symptoms cannot be evaluated empty.")
     else:
-        with st.spinner("Processing Dataset Pipelines & LLM Synthesis..."):
+        # Performance Logging Initialization
+        start_time = time.time()
+        
+        with st.spinner("Executing Dataset Vector Mappings and LLM Hyperparameter Inferences..."):
             ml_insight, inferred_disease, dataset_record_id, absolute_record = get_ml_prediction_and_sync(user_symptoms)
             st.session_state.dataset_record_id = dataset_record_id
             
             try:
-                # Combining Dataset output string dictionary into the main prompt variable structure
                 dataset_context_str = json.dumps(absolute_record, ensure_ascii=False)
-                
                 chain = prompt_template | llm
                 response = chain.invoke({
                     "age": age,
                     "gender": gender,
                     "symptoms": user_symptoms,
-                    "notes": additional_notes or "None provided.",
+                    "notes": additional_notes or "None logged.",
                     "ml_insight": ml_insight,
                     "dataset_context": dataset_context_str
                 })
                 
+                # Commit operational telemetry records to application state
                 st.session_state.analysis = response.content
                 st.session_state.ml_insight = ml_insight
+                st.session_state.total_analyses += 1
+                
+                # Track compute runtime metrics
+                duration = time.time() - start_time
+                st.session_state.execution_times.append(duration)
+                
             except Exception as e:
-                st.error(f"Execution error: {str(e)}")
+                st.error(f"Critical Runtime Exception encountered: {str(e)}")
 
+# -----------------------------------------------------------------------------
+# PRESENTATION LAYER & MONETIZATION ACTION ARCHITECTURE
+# -----------------------------------------------------------------------------
 if "analysis" in st.session_state:
-    st.subheader("Pharmacy GPT Analysis & Recommendations")
+    # MONETIZATION PIPELINE: Context-aware programmatic banner injection
+    symptom_kw = user_symptoms.lower()
+    if any(k in symptom_kw for k in ["cough", "fever", "cold", "flu", "sore throat"]):
+        st.markdown("""
+        <div class="ad-banner">
+            <strong>SPONSORED EGYPTIAN PHARMA ALERT:</strong> Facing common cold or low immunity markers? 
+            Order authentic multivitamins or relief therapeutics directly via our verified affiliates. 
+            Use promo code <strong>PGPT2026</strong> for 12% instant cashback on <strong>Yodawy / Chefaa</strong> apps!
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.subheader("System Diagnostic Output")
     st.markdown(st.session_state.analysis)
     
-    st.divider()
-    c1, c2, c3 = st.columns(3)
-    with c1:
-        st.success("Dataset / ML Model Insight")
-        st.write(st.session_state.ml_insight)
-    with c2:
-        st.info("Dataset Record Index Tracked")
-        st.metric(label="Record Entry Row ID", value=f"#{st.session_state.get('dataset_record_id', 'N/A')}")
-    with c3:
-        st.error("Medical Disclaimer")
-        st.write("This AI tool is for learning and simulation only. Do not self-medicate based on this output.")
-
-# CHAT SYSTEM INTERACTION
-st.markdown("---")
-st.subheader("Follow-up Chat with Pharmacy GPT")
-
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
-
-if prompt := st.chat_input("Ask more questions..."):
-    if llm is None:
-        st.error("Ollama is not running.")
-    else:
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.markdown(prompt)
-        
-        with st.chat_message("assistant"):
-            with st.spinner("Consulting Pharmacy GPT..."):
-                try:
-                    chat_resp = llm.invoke(
-                        f"Context from previous diagnosis: {st.session_state.get('analysis', '')}\n"
-                        f"User question: {prompt}\n"
-                        f"Respond helpfully as Pharmacy GPT focusing on the Egyptian pharmaceutical landscape, localized pricing, and available equivalents."
-                    )
-                    st.markdown(chat_resp.content)
-                    st.session_state.messages.append({"role": "assistant", "content": chat_resp.content})
-                except Exception as e:
-                    st.error(f"Error: {str(e)}")
+    # MONETIZATION PIPELINE: Strategic Affiliate Lead Conversion Triggers
+    st.markdown("### Affiliate Fulfillment and Real-time Local
