@@ -7,7 +7,9 @@ import time
 from langchain_ollama import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 
+# -----------------------------------------------------------------------------
 # PRODUCTION CODE ARCHITECTURE & SYSTEM CONFIGURATION
+# -----------------------------------------------------------------------------
 # ENHANCEMENT: Using strict relative execution pathing to prevent Linux deployment crashes.
 # The absolute windows drive paths ('D:/pharmacy Assistant/...') are completely decoupled.
 st.set_page_config(
@@ -26,7 +28,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# -----------------------------------------------------------------------------
 # TELEMETRY & DATA METRICS INITIALIZATION (STATE ENGINE)
+# -----------------------------------------------------------------------------
 # INITIALIZATION: Instantiating tracking telemetry inside Streamlit's global session state.
 if "total_analyses" not in st.session_state:
     st.session_state.total_analyses = 0
@@ -37,7 +41,9 @@ if "estimated_revenue" not in st.session_state:
 if "execution_times" not in st.session_state:
     st.session_state.execution_times = []
 
+# -----------------------------------------------------------------------------
 # DATASET LIFECYCLE MANAGEMENT (COMPRESSION & MEMORY PIPELINE)
+# -----------------------------------------------------------------------------
 DATASET_PATH = "Disease_and_symptoms_dataset.csv"
 ZIP_DATASET_PATH = "Disease_and_symptoms_dataset.zip"
 
@@ -78,9 +84,7 @@ def initialize_dataset():
 initialize_dataset()
 
 def search_local_dataset(query_text):
-    """
-    Performs high-speed safe evaluation scan over the extracted pandas DataFrame structures.
-    """
+   # Performs high-speed safe evaluation scan over the extracted pandas DataFrame structures.
     if not query_text:
         return None, None
     try:
@@ -99,9 +103,7 @@ def search_local_dataset(query_text):
     return None, None
 
 def append_new_record_to_dataset(disease, symptoms, precautions, insight):
-    
     #Appends out-of-vocabulary synthesised inferences back to the base historical tracking tables.
-    
     try:
         df = pd.read_csv(DATASET_PATH, on_bad_lines='skip', encoding='utf-8')
     except Exception:
@@ -256,9 +258,7 @@ if st.button("Run Pipeline Diagnostics and Treatment Architecture", type="primar
             except Exception as e:
                 st.error(f"Critical Runtime Exception encountered: {str(e)}")
 
-# -----------------------------------------------------------------------------
 # PRESENTATION LAYER & MONETIZATION ACTION ARCHITECTURE
-# -----------------------------------------------------------------------------
 if "analysis" in st.session_state:
     # MONETIZATION PIPELINE: Context-aware programmatic banner injection
     symptom_kw = user_symptoms.lower()
@@ -275,4 +275,85 @@ if "analysis" in st.session_state:
     st.markdown(st.session_state.analysis)
     
     # MONETIZATION PIPELINE: Strategic Affiliate Lead Conversion Triggers
-    st.markdown("### Affiliate Fulfillment and Real-time Local
+    st.markdown("### Affiliate Fulfillment and Real-time Local Supply Query")
+    st.write("Convert this recommendation into a physical order. Selecting a partner below tracks commission parameters:")
+    
+    btn_col1, btn_col2, btn_col3 = st.columns(3)
+    
+    with btn_col1:
+        # Dynamic telemetry hook simulation for Affiliate A
+        if st.button("Order via Yodawy Gateway", use_container_width=True, type="secondary"):
+            st.session_state.affiliate_clicks += 1
+            # Assuming an average ticket size of 150 EGP per OTC basket with a 4% standard referral commission
+            st.session_state.estimated_revenue += (150.0 * 0.04)
+            st.toast("Redirecting to Yodawy API Context Link... (Affiliate Tracking Active ID: #YOD-01)")
+            
+    with btn_col2:
+        # Dynamic telemetry hook simulation for Affiliate B
+        if st.button("Check Stocks and Dispatch via El-Ezaby Hub", use_container_width=True, type="secondary"):
+            st.session_state.affiliate_clicks += 1
+            st.session_state.estimated_revenue += (150.0 * 0.03) # 3% commission tier
+            st.toast("Opening secure tunnel payload to El-Ezaby digital checkout inventory...")
+            
+    with btn_col3:
+        if st.button("Order via Chefaa Digital Health Network", use_container_width=True, type="secondary"):
+            st.session_state.affiliate_clicks += 1
+            st.session_state.estimated_revenue += (120.0 * 0.05) # 5% commission tier
+            st.toast("Connecting pipeline parameters to Chefaa cart optimization platform...")
+
+    st.divider()
+
+    # ADVANCED BI SYSTEM & REAL-TIME PERFORMANCE METRICS (DASHBOARD)
+    st.subheader("Live Monetization Analytics and Core System Telemetry")
+    st.write("This metrics panel tracks operational health, user engagement, and conversion revenue yield data directly from volatile RAM registers:")
+    
+    m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+    
+    # Calculation of statistical operational parameters
+    ctr = (st.session_state.affiliate_clicks / st.session_state.total_analyses * 100) if st.session_state.total_analyses > 0 else 0.0
+    avg_latency = (sum(st.session_state.execution_times) / len(st.session_state.execution_times)) if st.session_state.execution_times else 0.0
+    
+    with m_col1:
+        st.metric(label="Total App Core Evaluations", value=st.session_state.total_analyses)
+    with m_col2:
+        st.metric(label="Affiliate Link Interactions", value=st.session_state.affiliate_clicks)
+    with m_col3:
+        st.metric(label="Click-Through Rate (CTR %)", value=f"{ctr:.1f}%")
+    with m_col4:
+        st.metric(label="Tracked Affiliate Revenue", value=f"{st.session_state.estimated_revenue:.2f} EGP", delta="Gross Yield")
+        
+    st.info(f"System Core Latency Telemetry: Mean response compilation duration: `{avg_latency:.2f} seconds` per standard inference pass.")
+
+# -----------------------------------------------------------------------------
+# DISCRETE MULTI-TURN COMPANION CHAT INTERACTION
+# -----------------------------------------------------------------------------
+st.markdown("---")
+st.subheader("Active Multi-Turn Consultation Chatroom")
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+for msg in st.session_state.messages:
+    with st.chat_message(msg["role"]):
+        st.markdown(msg["content"])
+
+if prompt := st.chat_input("Input secondary queries regarding substitutes, pricing variance or dosages..."):
+    if llm is None:
+        st.error("Conversational state failure: Active LLM instance engine is unmapped.")
+    else:
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.markdown(prompt)
+        
+        with st.chat_message("assistant"):
+            with st.spinner("Synthesizing tailored pharmaceutical response..."):
+                try:
+                    chat_resp = llm.invoke(
+                        f"Context from previous diagnosis: {st.session_state.get('analysis', '')}\n"
+                        f"User question: {prompt}\n"
+                        f"Respond helpfully as Pharmacy GPT focusing on the Egyptian pharmaceutical landscape, localized pricing, and available equivalents."
+                    )
+                    st.markdown(chat_resp.content)
+                    st.session_state.messages.append({"role": "assistant", "content": chat_resp.content})
+                except Exception as e:
+                    st.error(f"Inference exception during contextual response generation: {str(e)}")
