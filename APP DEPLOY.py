@@ -152,16 +152,23 @@ llm = get_llm()
 if llm is None:
     st.error("Ollama connection failed. Ensure your ngrok tunnel is live and the model is running.")
 
+# Main prompt enhanced to strictly cross-reference both local Dataset insights and Egyptian market pricing/status
 prompt_template = ChatPromptTemplate.from_template("""
 You are Pharmacy GPT, an expert AI pharmacist assistant specializing in the Egyptian pharmaceutical market.
-Patient: {age} years old, {gender}.
-Symptoms: {symptoms}.
-Notes: {notes}.
+Your task is to analyze the user's condition by cross-referencing BOTH the local historical dataset insight and your internal medical knowledge.
+
+Patient Profile: {age} years old, {gender}.
+Symptoms Entered: {symptoms}.
+Medical Notes: {notes}.
+Dataset Reference Mapping: {dataset_context}
 ML Prediction Insight: {ml_insight}
 
-Provide a clear, structured response adhering to these sections:
-1. Possible Conditions
+Provide a clear, highly structured response adhering to these exact sections:
+1. Possible Conditions (Based on symptoms and dataset analysis)
 2. Recommended Over-The-Counter (OTC) Medicines & Egyptian Market Status:
+   - Provide the specific commercial medicine name(s) relevant to the symptoms and matched dataset info.
+   - For EACH medicine, state the estimated localized price in Egyptian Pounds (EGP).
+   - Explicitly state the Market Status: Whether it is currently "Available" or facing shortages/"Not Available" in Egyptian pharmacies. If a shortage exists, name a locally produced equivalent/substitute.
 3. Home Care & Lifestyle Advice
 4. Red Flags — when to see a doctor immediately
 5. Precautions & Contraindications
@@ -174,16 +181,16 @@ structuring_prompt_template = ChatPromptTemplate.from_messages([
 
 def get_ml_prediction_and_sync(symptoms_text):
     if not symptoms_text:
-        return "No symptoms specified for analysis.", "Unknown", "N/A"
+        return "No symptoms specified for analysis.", "Unknown", "N/A", {}
     
     matched_record, record_num = search_local_dataset(symptoms_text)
     
     if matched_record:
         st.info(f"Record match found directly in Dataset! [Record Row Number: #{record_num}]")
-        return matched_record["ML_Insight"], matched_record["Disease"], record_num
+        return matched_record["ML_Insight"], matched_record["Disease"], record_num, matched_record
     
     if llm is not None:
-        st.warning(" Not found in current dataset. Querying Ollama to synthesize a new record entry...")
+        st.warning("Not found in current dataset. Querying Ollama to synthesize a new record entry...")
         try:
             structuring_chain = structuring_prompt_template | llm
             raw_json = structuring_chain.invoke({"user_symptoms": symptoms_text}).content.strip()
@@ -204,16 +211,19 @@ def get_ml_prediction_and_sync(symptoms_text):
             
             if isinstance(new_record_num, int):
                 st.toast(f"✅ Dynamically saved entry into dataset as Record Entry #{new_record_num}!")
-            return parsed_record.get("ML_Insight", "Analysis ready"), parsed_record.get("Disease", "Unknown"), new_record_num
+            return parsed_record.get("ML_Insight", "Analysis ready"), parsed_record.get("Disease", "Unknown"), new_record_num, parsed_record
             
         except Exception:
             pass
 
     normalized_text = symptoms_text.lower()
     trigger_words = ["fever", "cough", "sore throat", "flu", "cold"]
+    fallback_record = {"Disease": "Undetermined Condition", "Symptoms": symptoms_text, "Precautions": "Rest", "ML_Insight": "Dynamic Evaluation Required"}
     if any(word in normalized_text for word in trigger_words):
-        return "High probability of Viral Respiratory Infection (Cold/Flu)", "Viral Respiratory Infection", "Dynamic"
-    return "Symptoms suggest possible mild infection or allergy.", "Undetermined Condition", "Dynamic"
+        fallback_record["Disease"] = "Viral Respiratory Infection"
+        return "High probability of Viral Respiratory Infection (Cold/Flu)", "Viral Respiratory Infection", "Dynamic", fallback_record
+        
+    return "Symptoms suggest possible mild infection or allergy.", "Undetermined Condition", "Dynamic", fallback_record
 
 # PROCESS ACTION
 if st.button("Analyze & Get Recommendations", type="primary", use_container_width=True):
@@ -223,17 +233,21 @@ if st.button("Analyze & Get Recommendations", type="primary", use_container_widt
         st.warning("Please provide a description of the symptoms before analyzing.")
     else:
         with st.spinner("Processing Dataset Pipelines & LLM Synthesis..."):
-            ml_insight, inferred_disease, dataset_record_id = get_ml_prediction_and_sync(user_symptoms)
+            ml_insight, inferred_disease, dataset_record_id, absolute_record = get_ml_prediction_and_sync(user_symptoms)
             st.session_state.dataset_record_id = dataset_record_id
             
             try:
+                # Combining Dataset output string dictionary into the main prompt variable structure
+                dataset_context_str = json.dumps(absolute_record, ensure_ascii=False)
+                
                 chain = prompt_template | llm
                 response = chain.invoke({
                     "age": age,
                     "gender": gender,
                     "symptoms": user_symptoms,
                     "notes": additional_notes or "None provided.",
-                    "ml_insight": ml_insight
+                    "ml_insight": ml_insight,
+                    "dataset_context": dataset_context_str
                 })
                 
                 st.session_state.analysis = response.content
